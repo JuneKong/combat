@@ -82,13 +82,6 @@ def execute(sql, args, autocommit=True):
 # ORM
 from orm import Model, StringField, IntegerField
 
-
-class User(Model):
-    __table__ = 'users'
-
-    id = IntegerField(primary_key=True)
-    name = StringField()
-
 # *******************************************************
 # IntegerField：整数列(有符号的) -2147483648 ～ 2147483647
 # StringField：字符串
