@@ -46,7 +46,7 @@ def select(sql, args, size=None):
     log(sql, args)
     global __pool
     with (yield from __pool) as conn:
-    	# DictCursor:指定返回的类型为dict(字典)
+        # DictCursor:指定返回的类型为dict(字典)
         cur = yield from conn.cursor(aiomysql.DictCursor)
         # SQL语句的占位符是?，而MySQL的占位符是%s, 因此要替换
         yield from cur.execute(sql.replace('?', '%s'), args or ())
@@ -64,20 +64,20 @@ def select(sql, args, size=None):
 
 @asyncio.coroutine
 def execute(sql, args, autocommit=True):
-    log(sql)
-    with (yield from __pool) as conn:
-    	if not autocommit:
-    		yield from conn.begin()
-        try:
-            cur = yield from conn.cursor()
-            yield from cur.execute(sql.replace('?', '%s'), args)
-            affected = cur.rowcount
-            yield from cur.close()
-        except BaseException as e:
-        	if not autocommit:
-        		yield from conn.rollback()
-            raise
-        return affected
+	log(sql)
+	with (yield from __pool) as conn:
+		if not autocommit:
+			yield from conn.begin()
+		try:
+			cur = yield from conn.cursor()
+			yield from cur.execute(sql.replace('?', '%s'), args)
+			affected = cur.rowcount
+			yield from cur.close()
+		except BaseException as e:
+			if not autocommit:
+				yield from conn.rollbRack()
+			raise
+		return affected
 
 # ORM
 from orm import Model, StringField, IntegerField
@@ -123,82 +123,84 @@ class Model(dict, metaclass=ModelMetaclass):
     @classmethod
     @asyncio.coroutine
     def find(cls, pk):
-    	'find object by primary key.'
-    	rs = yield from select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [pk], 1)
-    	if len(rs) == 0:
-    		return None
-    	return cls(**rs[0])
+        'find object by primary key.'
+        rs = yield from select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [pk], 1)
+        if len(rs) == 0:
+            return None
+        return cls(**rs[0])
 
     # 查找所有
     @classmethod
     @asyncio.coroutine
     def findAll(cls, where=None, args=None, **kw):
-    	'find objects by where clause.'
-    	sql = [cls.__select__]
-    	if where:
-    		sql.append('where')
-    		sql.append(where)
-    	if args is None:
-    		args = []
-    	orderBy = kw.get('orderBy', None)
-    	if orderBy:
-    		sql.append('order by')
-    		sql.append(orderBy)
-    	limit = kw.get('limit', None)
-    	if limit is not None:
-    		sql.append('limit')
-    		if isinstance(limit, int):
-    			sql.append('?')
-    			args.append(limit)
-    		elif isinstance(limit, tuple) and len(limit) == 2:
-    			sql.append('?, ?')
-    			args.extend(limit)
-    		else:
-    			raise ValueError('Invalid limit value: %s' % str(limit))
-    	rs = yield from select(' '.join(sql), args)
-    	return [cls(**r) for r in rs]
-	
-	# 根据number查找
-	@classmethod
-	@asyncio.coroutine
-	def findNumber(cls, selectField, where=None, args=None):
-		'find number by select and where.'
-		sql = ['select %s _num_ from `%s`' % (selectField, cls.__table__)]
-		if where:
-			sql.append('where')
-			sql.append(where)
-		rs = yield from select(' '.join(sql), args, 1)
-		if len(rs) == 0:
-			return None
-		return rs[0]['_num_']
+        'find objects by where clause.'
+        sql = [cls.__select__]
+        if where:
+            sql.append('where')
+            sql.append(where)
+        if args is None:
+            args = []
+        orderBy = kw.get('orderBy', None)
+        if orderBy:
+            sql.append('order by')
+            sql.append(orderBy)
+        limit = kw.get('limit', None)
+        if limit is not None:
+            sql.append('limit')
+            if isinstance(limit, int):
+                sql.append('?')
+                args.append(limit)
+            elif isinstance(limit, tuple) and len(limit) == 2:
+                sql.append('?, ?')
+                args.extend(limit)
+            else:
+                raise ValueError('Invalid limit value: %s' % str(limit))
+        rs = yield from select(' '.join(sql), args)
+        return [cls(**r) for r in rs]
+
+        # 根据number查找
+        @classmethod
+        @asyncio.coroutine
+        def findNumber(cls, selectField, where=None, args=None):
+            'find number by select and where.'
+            sql = ['select %s _num_ from `%s`' % (selectField, cls.__table__)]
+            if where:
+                sql.append('where')
+                sql.append(where)
+            rs = yield from select(' '.join(sql), args, 1)
+            if len(rs) == 0:
+                return None
+            return rs[0]['_num_']
 
     # *******实例方法*******
     # 调用时要加yield from， 不然仅仅是创建而没有执行
     # 保存
     @asyncio.coroutine
     def save(self):
-    	args = list(map(self.getValueOrDefault, self.__fields__))
-    	args.append(self.getValueOrDefault(self.__primary_key__))
-    	rows = yield from execute(self.__insert__, args)
-    	if rows != 1:
-    		logging.warn('failed to insert record: affected rows: %s' % rows)
+        args = list(map(self.getValueOrDefault, self.__fields__))
+        args.append(self.getValueOrDefault(self.__primary_key__))
+        rows = yield from execute(self.__insert__, args)
+        if rows != 1:
+            logging.warn('failed to insert record: affected rows: %s' % rows)
 
     # 更新
     @asyncio.coroutine
     def update(self):
-    	args = list(map(self.getValue, self.__fields__))
-    	args.append(self.getValue(self.__primary_key__))
-    	rows = yield from execute(self.__update__, args)
-    	if rows != 1:
-    		logging.warn('failed to update by primary key: affected row: %s' % rows)
+        args = list(map(self.getValue, self.__fields__))
+        args.append(self.getValue(self.__primary_key__))
+        rows = yield from execute(self.__update__, args)
+        if rows != 1:
+            logging.warn(
+                'failed to update by primary key: affected row: %s' % rows)
 
     # 删除
     @asyncio.coroutine
     def remove(self):
-    	args = [self.getValue(self.__primary_key__)]
-    	rows = yield from execute(self.__delete__, args)
-    	if rows != 1:
-    		logging.warn('failed to remove by primary key: affected  rows: %s' % rows)
+        args = [self.getValue(self.__primary_key__)]
+        rows = yield from execute(self.__delete__, args)
+        if rows != 1:
+            logging.warn(
+                'failed to remove by primary key: affected  rows: %s' % rows)
 
 # *************************************************************
 # 1、只有继承了type的类能够做为metaclass的参数。(不建议使用，高手除外)
@@ -227,63 +229,77 @@ class Field(object):
 # 映射varchar的StringField类
 # 字符
 class StringField(Field):
+
     def __init__(self, name=None, primary_key=False, default=None, ddl='varchar(100)'):
         super().__init__(name, ddl, primary_key, default)
 # 布尔值
+
+
 class BooleanField(Field):
-	def __init__(self, name=None, default=False):
-		super().__init__(name, 'boolean', False, default)		
+
+    def __init__(self, name=None, default=False):
+        super().__init__(name, 'boolean', False, default)
 # 整型
+
+
 class IntegerField(Field):
-	def __init__(self, name=None, primary_key=False, default=0):
-		super().__init__(name, 'bigint', primary_key, default)		
+
+    def __init__(self, name=None, primary_key=False, default=0):
+        super().__init__(name, 'bigint', primary_key, default)
 # 浮点型
+
+
 class FloatField(Field):
-	def __init__(self, name=None, primary_key=False, default=0.0):
-		super().__init__(name, 'real', primary_key, default)		
+
+    def __init__(self, name=None, primary_key=False, default=0.0):
+        super().__init__(name, 'real', primary_key, default)
 # 文本
+
+
 class TextField(Field):
-	def __init__(self, name=None, default=None):
-		super().__init__(name, 'text', False, default)		
+
+    def __init__(self, name=None, default=None):
+        super().__init__(name, 'text', False, default)
 
 
 def create_args_string(num):
-	L = []
-	for n in range(num):
-		L.append('?')
-	return ', '.join(L)
+    L = []
+    for n in range(num):
+        L.append('?')
+    return ', '.join(L)
 
 # 将具体的子类如User的映射信息读取，通过metaclass：ModelMetaclass
 
+
 class ModelMetaclass(type):
 
-    def __new__(cls, name, bases, attrs):
+	def __new__(cls, name, bases, attrs):
         # 排除Model类本身
-        if name == 'Model'
-            return type.__new__(cls, name, bases, attrs)
+		if name == 'Model':
+			return type.__new__(cls, name, bases, attrs)
         # 获取table名称
-        tableName = attrs.get('__table__', None) or name
-        logging.info('found model: %s (table: %s)' % (name, tableName))
+		tableName = attrs.get('__table__', None) or name
+		logging.info('found model: %s (table: %s)' % (name, tableName))
         # 获取所有的Field和主域名
-        mappings = dict()
-        fields = []
-        primaryKey = None
-        for k, v in attrs.items():
-            if isinstance(v, Field):
-                logging.info('  found mapping: %s ==> %s' % (k, v))
-                mappings[k] = v
-                if v.primary_key:
+		mappings = dict()
+		fields = []
+		primaryKey = None
+		for k, v in attrs.items():
+			if isinstance(v, Field):
+				logging.info('  found mapping: %s ==> %s' % (k, v))
+				mappings[k] = v
+				if v.primary_key:
                     # 找到主键
-                    if primaryKey:
-                        raise RuntimeError(
-                            "Duplicate primary key for field: %s" % k)
-                    primaryKey = k
-                else:
-                    fields.append(k)
-        if not primaryKey:
-            raise RuntimeError('Primany key not found.')
-        for k in mappings.keys():
-            attrs.pop(k)
+					if primaryKey:
+						raise RuntimeError(
+							"Duplicate primary key for field: %s" % k)
+					primaryKey = k
+				else:
+					fields.append(k)
+		if not primaryKey:
+			raise RuntimeError('Primany key not found.')
+		for k in mappings.keys():
+			attrs.pop(k)
         escaped_fields = list(map(lambda f: '`%s`' % f, fields))
         attrs['__mappings__'] = mappings  # 保存属性和列的映射关系
         attrs['__table__'] = tableName
