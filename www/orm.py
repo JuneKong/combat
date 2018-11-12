@@ -7,6 +7,9 @@ import logging
 
 import aiomysql
 
+def log(sql, args=()):
+    logging.info('SQL: %s' % sql)
+
 # 创建连接池
 # 连接池由全局变量__pool存储，缺省情况下将编码设置为utf8，自动提交事务
 
@@ -21,7 +24,7 @@ def create_pool(loop, **kw):
         user=kw['user'],
         password=kw['password'],
         db=kw['db'],
-        charset=kw.get('charset', 'utf-8'),
+        charset=kw.get('charset', 'utf8'),
         autocommit=kw.get('autocommit', True),
         maxsize=kw.get('maxsize', 10),
         minsize=kw.get('minsize', 1),
@@ -64,28 +67,89 @@ def select(sql, args, size=None):
 
 @asyncio.coroutine
 def execute(sql, args, autocommit=True):
-	log(sql)
-	with (yield from __pool) as conn:
-		if not autocommit:
-			yield from conn.begin()
-		try:
-			cur = yield from conn.cursor()
-			yield from cur.execute(sql.replace('?', '%s'), args)
-			affected = cur.rowcount
-			yield from cur.close()
-		except BaseException as e:
-			if not autocommit:
-				yield from conn.rollbRack()
-			raise
-		return affected
+    log(sql)
+    with (yield from __pool) as conn:
+        if not autocommit:
+            yield from conn.begin()
+        try:
+            cur = yield from conn.cursor()
+            yield from cur.execute(sql.replace('?', '%s'), args)
+            affected = cur.rowcount
+            yield from cur.close()
+        except BaseException as e:
+            if not autocommit:
+                yield from conn.rollbRack()
+            raise
+        return affected
 
 # ORM
-from orm import Model, StringField, IntegerField
+# from orm import Model, StringField, IntegerField
 
 # *******************************************************
 # IntegerField：整数列(有符号的) -2147483648 ～ 2147483647
 # StringField：字符串
 # *******************************************************
+
+# 将具体的子类如User的映射信息读取，通过metaclass：ModelMetaclass
+
+
+class ModelMetaclass(type):
+
+    def __new__(cls, name, bases, attrs):
+        # 排除Model类本身
+        if name == 'Model':
+            return type.__new__(cls, name, bases, attrs)
+    # 获取table名称
+        tableName = attrs.get('__table__', None) or name
+        logging.info('found model: %s (table: %s)' % (name, tableName))
+    # 获取所有的Field和主域名
+        mappings = dict()
+        fields = []
+        primaryKey = None
+        for k, v in attrs.items():
+            if isinstance(v, Field):
+                logging.info('  found mapping: %s ==> %s' % (k, v))
+                mappings[k] = v
+                if v.primary_key:
+                    # 找到主键
+                    if primaryKey:
+                        raise RuntimeError(
+                            "Duplicate primary key for field: %s" % k)
+                    primaryKey = k
+                else:
+                    fields.append(k)
+        if not primaryKey:
+            raise RuntimeError('Primany key not found.')
+        for k in mappings.keys():
+            attrs.pop(k)
+        escaped_fields = list(map(lambda f: '`%s`' % f, fields))
+        # 保存属性和列的映射关系
+        attrs['__mappings__'] = mappings
+        attrs['__table__'] = tableName
+        # 主键属性名
+        attrs['__primary_key__'] = primaryKey
+        # 除主键外的属性名
+        attrs['__fields__'] = fields
+        # 构造默认的SELECT,INSERT,UPDATE和DELETE语句
+        attrs['__select__'] = 'select `%s`, %s from `%s`' % (
+            primaryKey, ','.join(escaped_fields), tableName)
+        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) value (%s)' % (tableName, ','.join(
+            escaped_fields), primaryKey, create_args_string(len(escaped_fields) + 1))
+        attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ','.join(
+            map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
+        attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (
+            tableName, primaryKey)
+        return type.__new__(cls, name, bases, attrs)
+
+# *******************************************************
+# 1、bases: 基类
+# 2、注意：<class 'type'>是所有类型的类型。<class 'object'>也是所有对象的超类（除了它自己）。
+# 3、__new__() 方法是在类准备将自身实例化时调用。
+#    __new__() 方法始终都是类的静态方法，即使没有被加上静态方法装饰器。
+# 4、RuntimeError：一般的运行时错误
+# 5、join() 方法用于将序列中的元素以指定的字符连接生成一个新的字符串。
+# *******************************************************
+
 
 
 # 定义Model(基类)
@@ -268,59 +332,3 @@ def create_args_string(num):
         L.append('?')
     return ', '.join(L)
 
-# 将具体的子类如User的映射信息读取，通过metaclass：ModelMetaclass
-
-
-class ModelMetaclass(type):
-
-	def __new__(cls, name, bases, attrs):
-        # 排除Model类本身
-		if name == 'Model':
-			return type.__new__(cls, name, bases, attrs)
-        # 获取table名称
-		tableName = attrs.get('__table__', None) or name
-		logging.info('found model: %s (table: %s)' % (name, tableName))
-        # 获取所有的Field和主域名
-		mappings = dict()
-		fields = []
-		primaryKey = None
-		for k, v in attrs.items():
-			if isinstance(v, Field):
-				logging.info('  found mapping: %s ==> %s' % (k, v))
-				mappings[k] = v
-				if v.primary_key:
-                    # 找到主键
-					if primaryKey:
-						raise RuntimeError(
-							"Duplicate primary key for field: %s" % k)
-					primaryKey = k
-				else:
-					fields.append(k)
-		if not primaryKey:
-			raise RuntimeError('Primany key not found.')
-		for k in mappings.keys():
-			attrs.pop(k)
-        escaped_fields = list(map(lambda f: '`%s`' % f, fields))
-        attrs['__mappings__'] = mappings  # 保存属性和列的映射关系
-        attrs['__table__'] = tableName
-        attrs['__primary_key__'] = primaryKey  # 主键属性名
-        attrs['__fields__'] = fields  # 除主键外的属性名
-        # 构造默认的SELECT,INSERT,UPDATE和DELETE语句
-        attrs['__select__'] = 'select `%s`, %s from `%s`' % (
-            primaryKey, ','.join(escaped_fields), tableName)
-        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) value (%s)' % (tableName, ','.join(
-            escaped_fields), primaryKey, create_args_string(len(escaped_fields) + 1))
-        attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ','.join(
-            map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
-        attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (
-            tableName, primaryKey)
-        return type.__new__(cls, name, bases, attrs)
-
-# *******************************************************
-# 1、bases: 基类
-# 2、注意：<class 'type'>是所有类型的类型。<class 'object'>也是所有对象的超类（除了它自己）。
-# 3、__new__() 方法是在类准备将自身实例化时调用。
-#    __new__() 方法始终都是类的静态方法，即使没有被加上静态方法装饰器。
-# 4、RuntimeError：一般的运行时错误
-# 5、join() 方法用于将序列中的元素以指定的字符连接生成一个新的字符串。
-# *******************************************************

@@ -30,13 +30,13 @@ class User(Model):
     admin = BooleanField()
     name = StringField(ddl='varchar(50)')
     image = StringField(ddl='varchar(500)')
-    created_at = FloatField(default=time.time)
+    create_at = FloatField(default=time.time)
 
 
 class Blog(Model):
     __table__ = 'blogs'
 
-    id = StringField(primary_key=True, default=next_id, dll='varchar(50)')
+    id = StringField(primary_key=True, default=next_id, ddl='varchar(50)')
     user_id = StringField(ddl='varchar(50)')
     user_name = StringField(ddl='varchar(50)')
     user_image = StringField(ddl='varchar(500)')
