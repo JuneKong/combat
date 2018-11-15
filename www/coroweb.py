@@ -120,12 +120,12 @@ class RequestHandler(object):
 				if not request.content_type:
 					return web.HTTPBadRequest(text='Missing Content_type.')
 				ct = request.content_type.lower()
-				if ct.startswitch('application/json'):
+				if ct.startswith('application/json'):
 					params = yield from request.json()
 					if not isinstance(params, dict):
 						return web.HTTPBadRequest(text='JSON body must be object.')
 					kw = params
-				elif ct.startswitch('application/x-www-from-urlencoded') or ct.startswitch('multipart/form-data'):
+				elif ct.startswith('application/x-www-from-urlencoded') or ct.startswith('multipart/form-data'):
 					params = yield from request.post()
 					kw = dict(**params)
 				else:
@@ -155,7 +155,7 @@ class RequestHandler(object):
 			for name in self._required_kw_args:
 				if not name in kw:
 					return web.HTTPBadRequest(text=('Missing argument: %s' % name))
-		logging,info('call with args: %s' % str(kw))
+		logging.info('call with args: %s' % str(kw))
 		try:
 			r = yield from self._func(**kw)
 			return r
@@ -193,7 +193,7 @@ def add_route(app, fn):
 		raise ValueError('@get or @path not defined in %s.' % str(fn))
 	if not asyncio.iscoroutinefunction(fn) and not inspect.isgeneratorfunction(fn):
 		fn = asyncio.coroutine(fn)
-	logging.info('add route %s %s => %s(%s)' % (method, path, fn.__name__, ','.join(inspect.signature(fn).parameters.key())))
+	logging.info('add route %s %s => %s(%s)' % (method, path, fn.__name__, ','.join(inspect.signature(fn).parameters.keys())))
 	app.router.add_route(method, path, RequestHandler(app, fn))
 
 # ****************************************
@@ -217,7 +217,7 @@ def add_routes(app, module_name):
 		name = module_name[n+1:]
 		mod = getattr(__import__(module_name[:n], globals(), locals(), [name]), name)
 	for attr in dir(mod):
-		if attr.startswitch('_'):
+		if attr.startswith('_'):
 			continue
 		fn = getattr(mod, attr)
 		if callable(fn):
