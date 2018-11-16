@@ -1,1 +1,3 @@
 static flie
+
+值得注意的是，我们需要把jquery引用在uikit.js之前，如果相反的话，uikit就会出现uikit need jquery的错误，影响页面的显示。
