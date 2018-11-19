@@ -13,6 +13,7 @@ if(!window.console){
 };
 
 // patch for string.trim():
+// trim():从一个字符串的两端删除空白字符。
 
 if(!String.prototype.trim){
 	String.prototype.trim = function() {
@@ -20,6 +21,8 @@ if(!String.prototype.trim){
 	};
 };
 
+// 根据样式设置当前时间显示--默认样式yyyy-MM-dd hh:mm:ss
+// @param： format 样式
 if(!Number.prototype.toDateTime) {
 	var replaces = {
 		'yyyy': function(dt) {
@@ -209,3 +212,234 @@ function Template(tpl){
 }
 
 // extends JQuery.form:
+
+$(function () {
+	console.log('Extends $form...');
+	$.fn.extend({
+		showFormError: function (err) {
+			return this.each(function () {
+				var $form = $(this),
+					$alert = $form && $form.find('.uk-alert-danger'),
+					fileName = err && err.data;
+				if (!$form.is('form')) {
+					console.error('Cannot call showFormError() on non-form object.');
+					return;
+				}
+				$form.find('input').removeClass('uk-form-danger');
+				$form.find('select').removeClass('uk-form-danger');
+				$form.find('textarea').removeClass('uk-form-danger');
+				if ($alert.length === 0) {
+					console.warn('Cannot find .uk-alert-danger element.');
+					return;
+				}
+				if (err) {
+					$alert.text(err.message ? err.message : (err.error ? err.error : err)).removeClass('uk-hidden').show();
+					if (($alert.offset().top - 60) < $(window).scrollTop()) {
+						$('html, body').animate({ scrollTop: $alert.offset().top - 60 });
+					}
+					if (fileName) {
+						$form.find('[name=' + fileName +']').addClass('uk-form-danger');
+					}
+				}
+				else {
+					$alert.addClass('uk-hidden').hide();
+					$form.find('.uk-form-danger').removeClass('uk-form-danger');
+				}
+			});
+		},
+		showFormLoading: function (isLoading) {
+			return this.each(function () {
+				var $form = $(this),
+					$submit = $form && $form.find('button[type=submit]'),
+					$buttons = $form && $form.find('button'),
+					$i = $submit && $submit.find('i'),
+					iconClass = $i && $i.arr('class');
+				if (!$form.is('form')) {
+					console.error('Cannot call showFormLoading() on non-form object.');
+					return;
+				}
+				if (!iconClass || iconClass.indexOf('uk-icon') < 0) {
+					console.warn('Icon <i class="uk-icon-*"> not found.');
+					return;
+				}
+				if (isLoading) {
+					$buttons.attr('disabled', 'disabled');
+					$i && $i.addClass('uk-icon.spinner').addClass('uk-icon-spin');
+				}
+				else {
+					$buttons.removeAttr('disabled');
+					$i && $i.removeClass('uk-icon-spinner').removeClass('uk-icon-spin');
+				}
+			});
+		},
+		postJSON: function (url, data, callback) {
+			if (arguments.length === 2) {
+				callback = data;
+				data = {};
+			}
+			return this.each(function () {
+				var $form = $(this);
+				$form.showFormError();
+				$form.showFormLoading(true);
+				_httpJSON('POST', url, data, function (err, r) {
+					if (err) {
+						$form.showFormError(err);
+						$form.showFormLoading(false);
+					}
+					callback && callback(err, r);
+				});
+			});
+		}
+	});
+});
+
+// ajax submit form:
+
+function _httpJSON(method, url, data, callback) {
+	var opt = {
+		type: method,
+		dataType: 'json'
+	};
+	if (method === 'GET') {
+		opt.url = url;
+		opt.data = JSON.stringify(data || {});
+		opt.contentType = 'application/json';
+	}
+	$.ajax(opt).done(function (r) {
+		if (r && r.error) {
+			return callback(r);
+		}
+		return callback(null, r);
+	}).fail(function (jqXHR, textStatus) {
+		return callback({'error': 'http_bad_response', 'data': '' + jqXHR.status, 'message': '网络好像出现问题了 (HTTP ' + jqXHR.status + ')'});
+	});
+}
+
+function getJSON(url, data, callback) {
+	if (arguments.length === 2) {
+		callback = data;
+		data = {};
+	}
+	if (typeof(data) === 'object') {
+		var arr = [];
+		$.each(data, function (k, v) {
+			arr.push(k + '=' + encodeURIComponent(v));
+		});
+		data = arr.join('&');
+	_httpJSON('GET', url, data, callback);
+}
+
+function postJSON(url, data, callback) {
+	if (arguments.length === 2) {
+		callback = data;
+		data = {};
+	}
+	_httpJSON('POST', url, data, callback);
+}
+
+// extends Vue:
+
+if (typeof(Vue) !== 'undefined') {
+	Vue.filter('datetime', function (value) {
+		var d = value;
+		if (typeof(value) === 'number') {
+			d = new Date(value);
+		}
+		return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getData() + ' ' + d.getHours() + ':' + d.getMinutes();
+	});
+	Vue.component('pagination', {
+		template: '<ul class="uk-pagination">' +
+				'<li v-if="!has_provious" class="uk-disabled"><span><i class="uk-icon-angle-double-left"></i></span></li>' + 
+				'<li v-if="has_provious"><a v-attr="onclick:\'gotoPage(\' + (page_index - 1) + \')\'" href="#0"><i class="uk-icon-angle-double-left"></i></a></li>' + 
+				'<li class="uk-active"><span v-text="page_index"></span></li>' + 
+				'<li v-if="!has_next" class="uk-disabled"><span><i class="uk-icon-angle-double-right"></i></span></li>' + 
+				'<li v-if="has_next"><a v-attr="onclick:\'gotoPage(\' + (page_index + 1) + \')\'" href="#0"><i class="uk-icon-angle-double-right"></i></a></li>' + 
+			'</ul>'
+	});
+}
+
+function redirect(url) {
+	var hash_pos = url.indexOf('#'),
+		query_pos = url.indexOf('?'),
+		hash = '';
+	if (hash_pos >= 0) {
+		hash = url.substring(hash_pos);
+		url = url.substring(0, hash_pos);
+	}
+	url = url + (query_pos >= 0 ? '&' : '?') + 't=' + new Date().getTime() + hash;
+	console.log('redirect to: ' + url);
+	location.assign(url);
+}
+
+// init:
+
+function _bindSubmit($form) {
+	$form.submit(function (event) {
+		event.preventDefault();
+		showFormError($form, null);
+		var fn_error = $form.attr('fn-error'),
+			fn_success = $form.attr('fn-success'),
+			fn_data = $form.attr('fn-data'),
+			data = fn_data ? window[fn_data]($form) : $form.serialize();
+		var $submit = $form.find('button[type=submit]'),
+			$i = $submit.find('i'),
+			iconClass = $i.attr('class');
+		if (!iconClass || iconClass.indexOf('uk-icon' < 0)) {
+			$i = undefined;
+		}
+		$submit.attr('disabled', 'disabled');
+		$i && $i.addClass('uk-icon-spinner').addClass('uk-icon-spin');
+		postJSON($form.attr('action-url'), data, function (err, result) {
+			$i && $i.removeClass('uk-icon-spinner').removeClass('uk-icon-spin');
+			if (err) {
+				console.log('postJSON failed: ' + JSON.stringify(err));
+				$submit.removeAttr('disabled');
+				fn_error ? fn_error() : showFormError($form, err);
+			}
+			else {
+				var r = fn_success ? window[fn_success](result) : false;
+				if (r === false) {
+					$submit.removeAttr('disabled');
+				}
+			}
+		});
+	});
+	$form.find('button[type=submit]').removeAttr('disabled');
+}
+
+$(function () {
+	$('form').each(function () {
+		var $form = $(this);
+		if ($form.attr('action-url')) {
+			_bindSubmit($form);
+		}
+	});
+});
+
+$(function () {
+	if (location.pathname === '/' || location.pathname.indexOf('/blog' === 0)) {
+		$('li[data-url=blogs]').addClass('uk-active');
+	}
+});
+
+function _display_error($obj, err) {
+	if ($obj.is(':visible')) {
+		$obj.hide();
+	}
+	var msg = err.message || String(err);
+	var L = ['<div class="uk-alert uk-alert-danger">'];
+	L.push('<p>Error: ');
+	L.push(msg);
+	L.push('</p><p>Code: ');
+	L.push(err.error || '500');
+	L.push('</p></div>');
+	$obj.html(L.join('')).slideDown();
+}
+
+function error(err) {
+	_display_error($('#error'), err);
+}
+
+function fatal(err) {
+	_display_error($('#loading'), err);
+}
