@@ -21,8 +21,10 @@ if(!String.prototype.trim){
 	};
 };
 
-// 根据样式设置当前时间显示--默认样式yyyy-MM-dd hh:mm:ss
-// @param： format 样式
+/**
+ * / 根据样式设置当前时间显示--默认样式yyyy-MM-dd hh:mm:ss
+ * @param： format 样式
+ */
 if(!Number.prototype.toDateTime) {
 	var replaces = {
 		'yyyy': function(dt) {
@@ -91,6 +93,9 @@ if(!Number.prototype.toDateTime) {
 	};
 };
 
+/**
+ * 编码HTML
+ */
 function encodeHtml(str){
 	return String(str)
 		.replace(/&/g, '&amp;')
@@ -107,10 +112,6 @@ function parseQueryString(){
 	var q = location.search,
 		r = {},
 		i, pos, s, qs;
-	////////////////////////////
-	// charAt() 方法可返回指定位置的字符。
-	// substring() 方法用于提取字符串中介于两个指定下标之间的字符。
-	////////////////////////////
 	if(q && q.charAt(0) === '?'){
 		qs = q.substring(1).split('&');
 		for (i = 0; i < qs.length; i++) {
@@ -126,6 +127,16 @@ function parseQueryString(){
 	return r;
 };
 
+// ***************************************************************************************
+// 1、location.search 属性是一个可读可写的字符串，可设置或返回当前URL的查询部分(问号?之后的部分）
+// 2、charAt() 方法可返回指定位置的字符。
+// 3、substring() 方法用于提取字符串中介于两个指定下标之间的字符。
+// 4、decodeURIComponent() 函数可对encodeURIComponent()函数编码的URI进行解码
+// ***************************************************************************************
+
+/**
+ * 添加时间到url中：
+ */
 function refresh(){
 	var t = new Date().getTime(),
 		url = location.pathname;
@@ -138,6 +149,21 @@ function refresh(){
 	location.assign(url);
 };
 
+// ***********************************************************************************
+// 1、location.pathname 属性是一个可读可写的字符串，可设置或返回当前 URL 的路径部分。
+// 2、location.assign()方法加载一个新的文档。 <==> location.href是一个属性
+// 3、location.assign(url) 与 location.replace(url)的区别： 
+// location.assign => 是加载 URL 指定的新的 HTML 文档。 就相当于一个链接,跳转到指定的url,
+// 					  当前页面会转为新页面内容，可以点击后退返回上一个页面。
+// location.replace(url) => 通过加载URL指定的文档来替换当前文档,这个方法是替换当前窗口页面,
+// 							前后两个页面共用一个窗口，所以是没有后退返回上一页的
+// **建议：使用replace。因为前两者会产生历史记录，而浏览者如果点‘后退’按钮，
+// 					   就会产生'redirection loop'，会被浏览器禁止。
+// ***********************************************************************************
+
+/**
+ * 根据时间戳转换发布时间
+ */
 function toSmartDate(timestamp){
 	if(typeof(timestamp) === 'string'){
 		timestamp = parseInt(timestamp);
@@ -192,7 +218,7 @@ function Template(tpl){
 			code.push('r.push(\'' + text.replace(/\'/g, '\\\'').replace(/\n/g, '\\n').replace(/\r/g, '\\r') + '\');');
 		};
 	while(match = re.exec(tpl)){
-		if (match.index > 0) {
+		if (match.index > 0) {//index属性:匹配成功时的位置
 			addLine(tpl.slice(0, match.index));
 		}
 		if (match[2]) {
@@ -210,6 +236,11 @@ function Template(tpl){
 		return fn.apply(model);
 	};
 }
+
+/***********************************************
+ * 1、exec() 方法用于检索字符串中的正则表达式的匹配。
+ ***********************************************/
+
 
 // extends JQuery.form:
 
@@ -315,6 +346,11 @@ function _httpJSON(method, url, data, callback) {
 	});
 }
 
+/***************************************************************************************************
+ * 1、JSON.stringify() 方法是将一个JavaScript值(对象或者数组)转换为一个 JSON字符串，
+ * 	  如果指定了replacer是一个函数，则可以替换值，或者如果指定了replacer是一个数组，可选的仅包括指定的属性。
+ ****************************************************************************************************/
+
 function getJSON(url, data, callback) {
 	if (arguments.length === 2) {
 		callback = data;
@@ -326,7 +362,9 @@ function getJSON(url, data, callback) {
 			arr.push(k + '=' + encodeURIComponent(v));
 		});
 		data = arr.join('&');
+	}
 	_httpJSON('GET', url, data, callback);
+
 }
 
 function postJSON(url, data, callback) {
@@ -340,6 +378,7 @@ function postJSON(url, data, callback) {
 // extends Vue:
 
 if (typeof(Vue) !== 'undefined') {
+	// Vue.filter()注册或获取全局过滤器。
 	Vue.filter('datetime', function (value) {
 		var d = value;
 		if (typeof(value) === 'number') {
@@ -347,6 +386,7 @@ if (typeof(Vue) !== 'undefined') {
 		}
 		return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getData() + ' ' + d.getHours() + ':' + d.getMinutes();
 	});
+	// 注册或获取全局组件。注册还会自动使用给定的id设置组件的名称
 	Vue.component('pagination', {
 		template: '<ul class="uk-pagination">' +
 				'<li v-if="!has_provious" class="uk-disabled"><span><i class="uk-icon-angle-double-left"></i></span></li>' + 
@@ -358,6 +398,9 @@ if (typeof(Vue) !== 'undefined') {
 	});
 }
 
+/**
+ * 重定向
+ */
 function redirect(url) {
 	var hash_pos = url.indexOf('#'),
 		query_pos = url.indexOf('?'),
@@ -438,8 +481,8 @@ function _display_error($obj, err) {
 
 function error(err) {
 	_display_error($('#error'), err);
-}
+};
 
 function fatal(err) {
 	_display_error($('#loading'), err);
-}
+};
