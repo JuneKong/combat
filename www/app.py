@@ -168,6 +168,7 @@ def init(loop):
 	logging.info('server started at http://127.0.0.1:9000...');
 	return srv;
 
+
 loop = asyncio.get_event_loop(); # 获取当前上下文的事件循环,创建一个事件循环
 # 将协程注册到事件循环，并启动事件循环
 # 其实是run_until_complete方法将协程包装成为了一个任务（task）对象. 

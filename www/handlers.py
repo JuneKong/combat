@@ -30,3 +30,4 @@ def index():
 		'__template__': 'blogs.html',
 		'blogs': blogs
 	}
+
