@@ -13,6 +13,7 @@ from jinja2 import Environment, FileSystemLoader
 import orm
 from coroweb import add_routes, add_static
 
+from handlers import cookie2user, COOKIR_NAME
 # middleware是一种拦截器，一个URL在被某个函数处理前，可以经过一系列的middleware的处理。
 # 添加middleware的时候已经作了倒序处理
 # 用处就在于把通用的功能从每个URL处理函数中拿出来，集中放到一个地方。
@@ -27,6 +28,21 @@ def logger_factory(app, handler):
 		# 继续处理请求
 		return (yield from handler(request))
 	return logger
+
+@asyncio.coroutine
+def auth_factory(app, handler):
+	@asyncio.coroutine
+	def auth(request):
+		logging.info('check user: %s %s' % (request.methed, request.path))
+		request.__user__ = None
+		cookie_str = request.cookies.get(COOKIR_NAME)
+		if cookie_str:
+			user = yield from cookie2user(cookie_str)
+			if user:
+				logging.info('set current user: %s' % user.email)
+				request.__user__ = user
+		return (yield from handler(request))
+	return auth
 
 # 把返回值转换为web.Response对象再返回，以保证满足aiohttp的要求
 @asyncio.coroutine
@@ -160,7 +176,7 @@ def init_jinja2(app, **kw):
 @asyncio.coroutine
 def init(loop):
 	yield from orm.create_pool(loop=loop, user='root', password='root', db='combat')
-	app = web.Application(loop=loop, middlewares=[logger_factory, response_factory])
+	app = web.Application(loop=loop, middlewares=[logger_factory, auth_factory, response_factory])
 	init_jinja2(app, filters=dict(datetime=datetime_filter))
 	add_routes(app, 'handlers')
 	add_static(app)
