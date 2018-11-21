@@ -31,3 +31,9 @@ def index():
 		'blogs': blogs
 	}
 
+@get('/api/users')
+def api_get_users():
+	users = yield from User.findAll(orderBy='create_at desc')
+	for u in users:
+		u.password = '******'
+	return dict(users=users)
