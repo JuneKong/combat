@@ -12,7 +12,11 @@ import hashlib
 import base64
 import asyncio
 
+import markdown2
+
 from coroweb import get, post
+from apis import Page, APIValueError, APIResourceNotFoundError
+
 from models import User, Comment, Blog, next_id
 from config import configs
 
@@ -23,6 +27,22 @@ _RE_EMAIL = re.compile(
     r'^[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$')
 # 注意用户口令是客户端传递的经过SHA1计算后的40位Hash字符串，所以服务器端并不知道用户的原始口令。
 _RE_SHA1 = re.compile(r'^[0-9a-f]{40}$')
+
+# 检测是否登录且是否为管理员
+def check_admin(request):
+	if request.__user__ is None or not request.__user__.admin:
+		raise APIPermissionError()
+
+def get_page_index(page_str):
+	p = 1
+	try:
+		p = int(page_str)
+	except ValueError as e:
+		pass
+	if p < 1:
+		p = 1
+	return p
+
 
 # @get('/')
 # async def index():
@@ -50,13 +70,18 @@ def index():
         'blogs': blogs
     }
 
-
-@get('/api/users')
-def api_get_users():
-    users = yield from User.findAll(orderBy='create_at desc')
-    for u in users:
-        u.password = '******'
-    return dict(users=users)
+@get('/blog/{id}')
+def get_blog(id):
+	blog = yield from Blog.find(id)
+	comments = yield from Comment.findAll('blog_id=?', [id], orderBy='create_at desc')
+	for c in comments:
+		c.html_content = text2html(c.content)
+	blog.html_content = markdown2.markdown(blog.content)
+	return {
+		'__template__': 'blog.html',
+		'blog': blog,
+		'comments': comments
+	}
 
 @get('/register')
 def register():
@@ -71,7 +96,12 @@ def signin():
 	}
 
 
-
+@get('/api/users')
+def api_get_users():
+    users = yield from User.findAll(orderBy='create_at desc')
+    for u in users:
+        u.password = '******'
+    return dict(users=users)
 
 @post('/api/users')
 def api_register_user(*, email, name, passwd):
@@ -98,7 +128,13 @@ def api_register_user(*, email, name, passwd):
     r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
     return r
 
-@post('api/blogs')
+@get('/api/blogs/{id}')
+def api_get_blog(*, id):
+	blog = yield from Blog.find(id)
+	return blog
+
+# 创建blog
+@post('/api/blogs')
 def api_create_blog(request, *, name, summary, content):
 	check_admin(request);
 	if not name or not name.strip():
@@ -137,6 +173,22 @@ def authenticate(*, email, passwd):
 	r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
 	return r
 
+@get('/signout')
+def signout(request):
+	referer = request.headers.get('Referer')
+	r = web.HTTPFound(referer or '/')
+	r.set_cookie(COOKIR_NAME, '-deleted-', max_age=0, httponly=True)
+	logging.info('user signed out.')
+	return r
+
+@get('/manage/blogs/create')
+def manage_create_blog(requrst):
+	return {
+		'__template__': 'manage_blog_edit.html',
+		'id': '',
+		'action': '/api/blogs',
+		'__user__': requrst.__user__
+	}
 
 # 计算加密cookie
 def user2cookie(user, max_age):
@@ -169,3 +221,7 @@ def cookie2user(cookie_str):
 	except Exception as e:
 		logging.exception(e)
 		return None
+
+def text2html(text):
+	lines = map(lambda s: '<p>%s</p>' % s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'), filter(lambda s: s.strip() != '', text.split('\n')))
+	return ''.join(lines)
