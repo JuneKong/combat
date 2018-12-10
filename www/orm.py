@@ -222,19 +222,19 @@ class Model(dict, metaclass=ModelMetaclass):
         rs = yield from select(' '.join(sql), args)
         return [cls(**r) for r in rs]
 
-        # 根据number查找
-        @classmethod
-        @asyncio.coroutine
-        def findNumber(cls, selectField, where=None, args=None):
-            'find number by select and where.'
-            sql = ['select %s _num_ from `%s`' % (selectField, cls.__table__)]
-            if where:
-                sql.append('where')
-                sql.append(where)
-            rs = yield from select(' '.join(sql), args, 1)
-            if len(rs) == 0:
-                return None
-            return rs[0]['_num_']
+    # 根据number查找
+    @classmethod
+    @asyncio.coroutine
+    def findNumber(cls, selectField, where=None, args=None):
+        'find number by select and where.'
+        sql = ['select %s _num_ from `%s`' % (selectField, cls.__table__)]
+        if where:
+            sql.append('where')
+            sql.append(where)
+        rs = yield from select(' '.join(sql), args, 1)
+        if len(rs) == 0:
+            return None
+        return rs[0]['_num_']
 
     # *******实例方法*******
     # 调用时要加yield from， 不然仅仅是创建而没有执行

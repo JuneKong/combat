@@ -4,6 +4,8 @@
 
 import json, logging, inspect, functools
 
+
+# 分页(显示blog的功能)
 class Page(object):
 	"""docstring for Page"""
 	def __init__(self, item_count, page_index=1, page_size=10):
