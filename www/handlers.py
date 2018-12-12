@@ -173,6 +173,11 @@ def api_blogs(*, page='1'):
 	blogs = yield from Blog.findAll(orderBy='create_at desc', limit=(p.offect, p.limit))
 	return dict(page=p, blogs=blogs)
 
+@get('/api/blogs/{id}')
+def api_get_blog(*, id):
+	blog = yield from Blog.find(id)
+	return blog
+
 # 创建日志
 @post('/api/blogs')
 def api_create_blog(request, *, name, summary, content):
@@ -186,11 +191,31 @@ def api_create_blog(request, *, name, summary, content):
 	blog = Blog(user_id=request.__user__.id, user_name=request.__user__.name, user_image=request.__user__.image, name=name.strip(), summary=summary.strip(), content=content.strip())
 	yield from blog.save();
 	return blog
+
 # 修改日志
 @post('/api/blogs/{id}')
+def api_update_blog(id, request, *, name, summary, content):
+	check_admin(request)
+	blog = yield from Blog.find(id)
+	if not name or not name.strip():
+		raise APIValueError('name', 'name cannot be empty.')
+	if not summary or not summary.strip():
+		raise APIValueError('summary', 'summary cannot be empty.')
+	if not content or not content.strip():
+		raise APIValueError('content', 'content cannot be empty.')
+	blog.name = name.strip()
+	blog.summary = summary.strip()
+	blog.content = content.strip()
+	yield from blog.update()
+	return blog
 
 # 删除日志
-@get('/api/blogs')
+@post('/api/blogs/{id}/delete')
+def api_delete_blog(request, *, id):
+	check_admin(request)
+	blog = yield from Blog.find(id)
+	yield from blog.remove()
+	return dict(id=id)
 
 # 获取评论
 @get('/api/comments')
@@ -202,8 +227,32 @@ def api_comments(*, page='1'):
 		return dict(page=p, comments=())
 	comments = yield from Comment.findAll(orderBy='create_at desc', limit=(p.offset, p.limit))
 	return dict(page=p, comments=comments)
+
 # 创建评论
+@post('/api/blogs/{id}/comments')
+def api_create_comment(id, request, *, content):
+	user = request.__user__
+	if user is None:
+		raise APIPermissionError('Please signin first.')
+	if not content or not content.strip():
+		raise APIValueError('content')
+	blog = yield from Blog.find(id)
+	if blog is None:
+		raise APIResourceNotFoundError('Blog')
+	comment = Comment(blog_id=blog.id, user_id=user.id, user_name=user.name, user_image=user.image, content=content.strip())
+	yield from comment.save()
+	return comment
+
 # 删除评论
+@post('/api/comments/{id}/delete')
+def api_delete_comment(id, request):
+	check_admin(request)
+	c = yield from Comment.find(id)
+	if c is None:
+		raise APIResourceNotFoundError('Comment')
+	yield from c.remove()
+	return dict(id=id)
+
 # 创建新用户
 @post('/api/users')
 def api_register_user(*, email, name, passwd):
@@ -232,17 +281,20 @@ def api_register_user(*, email, name, passwd):
 
 # 获取用户
 @get('/api/users')
-def api_get_users():
-    users = yield from User.findAll(orderBy='create_at desc')
-    for u in users:
-        u.password = '******'
-    return dict(users=users)
+def api_get_users(*, page='1'):
+	page_index = get_page_index(page)
+	num = yield from User.findNumber('count(id)')
+	p = Page(num, page_index)
+	if num == 0:
+		return dict(page=p, users=())
+	users = yield from User.findAll(orderBy='create_at desc', limit(p.offset, p.limit))
+	for u in users:
+		u.password = '******'
+	return dict(page=p, users=users)
+
 # *****************end:后端api********************************
 
-@get('/api/blogs/{id}')
-def api_get_blog(*, id):
-	blog = yield from Blog.find(id)
-	return blog
+
 
 # 用户是否存在
 @post('/api/authenticate')
