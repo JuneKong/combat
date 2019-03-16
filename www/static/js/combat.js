@@ -376,7 +376,7 @@ function postJSON(url, data, callback) {
 }
 
 // extends Vue:
-
+// **使用typeof判断未声明的值时的安全防范机制。若该值未声明，typeof a 会等于undefined
 if (typeof(Vue) !== 'undefined') {
 	// Vue.filter()注册或获取全局过滤器。
 	Vue.filter('datetime', function (value) {

@@ -151,6 +151,7 @@ def manage_edit_blog(*, id):
 		'id': id,
 		'action': '/api/blogs/%s' % id
 	}
+
 # 用户列表
 @get('/manage/users')
 def manage_users(*, page='1'):
@@ -287,7 +288,7 @@ def api_get_users(*, page='1'):
 	p = Page(num, page_index)
 	if num == 0:
 		return dict(page=p, users=())
-	users = yield from User.findAll(orderBy='create_at desc', limit(p.offset, p.limit))
+	users = yield from User.findAll(orderBy='create_at desc',limit=(p.offset, p.limit))
 	for u in users:
 		u.password = '******'
 	return dict(page=p, users=users)

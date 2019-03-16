@@ -170,9 +170,9 @@ def init_jinja2(app, **kw):
 # 3、os.path.abspath(__file__) 获取脚本完整路径
 # **注：当前正在执行的代码的目录，若未执行任何代码文件会报错‘__file__’ is not defined
 # 4、jinja2.Environment():(环境)
-# 	参数loader:加载器
+# 	参数loader:加载模板
 # 5、假设环境对象env，env.filters属性：过滤器字典
-# 6、jinja2.FileSystemLoader(path, encode='utf-8'): 文件系统加载器
+# 6、jinja2.FileSystemLoader(path, encode='utf-8'): 文件系统加载器,查找模板
 # 	path可以为字符串或列表(多个位置时)
 # ********************************************************************************
 

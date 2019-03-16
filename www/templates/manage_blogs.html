@@ -5,12 +5,12 @@
 {% block beforehead %}
 
 <script>
-	function initVM(data){
+	function initVM(results){
 		var vm = new Vue({
 			el: '#vm',
-			date: {
-				blogs: data.blogs,
-				page: data.page
+			data: {
+				blogs: results.blogs,
+				page: results.page
 			},
 			methods: {
 				edit_blog: function (blog) {

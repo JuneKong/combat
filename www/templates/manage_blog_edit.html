@@ -18,7 +18,7 @@
 	function initVM(blog){
 		var vm = new Vue({
 			el: '#vm',
-			date: blog,
+			data: blog,
 			methods: {
 				submit: function(event) {
 					event.preventDefault();
