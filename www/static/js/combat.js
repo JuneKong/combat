@@ -332,6 +332,10 @@ function _httpJSON(method, url, data, callback) {
 		dataType: 'json'
 	};
 	if (method === 'GET') {
+		opt.url = url + '?' + data;
+	}
+
+	if (method === 'POST') {
 		opt.url = url;
 		opt.data = JSON.stringify(data || {});
 		opt.contentType = 'application/json';

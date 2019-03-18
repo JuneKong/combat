@@ -10,6 +10,7 @@
 	<script src="/static/js/uikit.min.js"></script>
 	<script src="/static/js/uikit-icons.min.js"></script>
 	<script src="/static/js/vue.min.js"></script>
+	<script src="/static/js/crypto-js.js"></script>
 	<script src="/static/js/combat.js"></script>
 	<script>
 		$(function(){
@@ -28,8 +29,10 @@
 								email: email,
 								passwd: this.passwd === '' ? '' : CryptoJS.SHA1(email + ':' + this.passwd).toString()
 							};
+						console.log(data.passwd);
 						$form.postJSON('/api/authenticate', data, function(err, result){
 							if (!err) {
+								console.log(result);
 								location.assign('/');
 							}
 						});
@@ -46,17 +49,11 @@
 			<form id="vm" v-on:submit="submit" class="uk-panel uk-panel-box uk-form">
 				<div class="uk-alert uk-alert-danger uk-hidden"></div>
 				<div class="uk-form-row">
-					<div class="uk-form-icon uk-width-1-1">
-						<i class="uk-icon-envelope-o"></i>
-						<input type="text" name="email" v-model="email" placeholder="电子邮件" maxlength="50" class="uk-width-1-1 uk-form-large">
-					</div>
+					<input type="text" name="email" v-model="email" placeholder="电子邮件" maxlength="50" class="uk-width-1-1 uk-form-large">
 				</div>
 				<div class="uk-form-row">
-					<div class="uk-form-icon uk-width-1-1">
-						<i class="uk-icon-lock"></i>
-						<input type="password" name="passwd" v-model="passwd" placeholder="密码" maxlength="50" class="uk-width-1-1 uk-form-large">
-					</div>
-				</div>
+					<input type="password" name="passwd" v-model="passwd" placeholder="密码" maxlength="50" class="uk-width-1-1 uk-form-large">
+				</div>	
 				<div class="uk-form-row">
 					<button type="submit" class="uk-button uk-button-primary uk-button-large uk-width-1-1"><i class="uk-icon-sign-in"></i> 登录</button>
 				</div>

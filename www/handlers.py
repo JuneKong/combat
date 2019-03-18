@@ -68,7 +68,7 @@ def index():
     ]
     return {
         '__template__': 'blogs.html',
-        'blogs': blogs
+        'blogs': blogs,
     }
 
 # 注册
@@ -300,7 +300,7 @@ def api_get_users(*, page='1'):
 # 用户是否存在
 @post('/api/authenticate')
 def authenticate(*, email, passwd):
-	if not email:
+	if not email: 
 		raise APIValueError('email', 'Invalid email.')
 	if not passwd:
 		raise APIValueError('passwd', 'Invalid password.')
@@ -310,9 +310,11 @@ def authenticate(*, email, passwd):
 	user = users[0]
 	# check passwd:
 	sha1 = hashlib.sha1();
-	sha1.update(user.id.encode('utf-8'))
+	sha1.update(user.email.encode('utf-8'))
 	sha1.update(b':')
 	sha1.update(passwd.encode('utf-8'))
+	print(sha1.hexdigest());
+	print(user.passwd);
 	if user.passwd != sha1.hexdigest():
 		raise APIValueError('passwd', 'Invalid password.')
 	# authenticate ok, set cookie:
