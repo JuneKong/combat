@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# name: 配置文件--发布
+# name: 数据库的配置文件--发布（覆盖）
 
 configs = {
     'db': {

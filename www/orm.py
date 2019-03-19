@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# name: 编写ORM
+# name: 编写ORM---操作数据库
 
 import asyncio
 import logging

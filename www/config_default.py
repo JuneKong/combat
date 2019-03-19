@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# name: 配置文件--开发
+# name: 数据库的配置文件--开发
 
 
 configs = {
@@ -9,8 +9,8 @@ configs = {
         'host': '127.0.0.1',
         'post': 3306,
         'user': 'root',
-                'password': 'root',
-                'db': 'combat'
+        'password': 'root',
+        'db': 'combat'
     },
     'session': {
         'secret': 'Combat'
